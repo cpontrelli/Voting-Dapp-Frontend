@@ -5,8 +5,10 @@ import { Address } from 'src/dtos/Address';
 import { RequestTokens } from 'src/dtos/RequestToken.dto';
 import { ReturnTokens } from 'src/dtos/ReturnTokens.dto';
 import tokenJson from "../assets/MyToken.json";
+import ballotJson from "../assets/Ballot.json";
 
-const TOKEN_ADDRESS_API_URL = 'http://localhost:3000/contract-address';
+const TOKEN_ADDRESS_API_URL = 'http://localhost:3000/token-address';
+const BALLOT_ADDRESS_API_URL = 'http://localhost:3000/ballot-address';
 const TOKEN_MINT_API_CALL = 'http://localhost:3000/request-tokens';
 
 @Component({
@@ -24,6 +26,8 @@ export class AppComponent {
   tokenContract: Contract | undefined;
   tokenSupply: number | undefined;
   tokenRequestTx: string | undefined;
+  ballotContractAddress: string | undefined;
+  ballotContract: Contract | undefined;
 
   constructor(private http: HttpClient) {
     this.provider = ethers.providers.getDefaultProvider('goerli');
@@ -34,11 +38,18 @@ export class AppComponent {
     this.provider.getBlock('latest').then((block) => {
       this.blockNumber = block.number;
     });
+
     this.http.get<Address>(TOKEN_ADDRESS_API_URL)
       .subscribe((response) => {
         this.tokenContractAddress = response.address;
         this.getTokenInfo();
-      });
+    });
+
+    this.http.get<Address>(BALLOT_ADDRESS_API_URL)
+      .subscribe((response) => {
+        this.ballotContractAddress = response.address;
+        this.getTokenInfo();
+    });
   }
 
   getTokenInfo() {
@@ -52,6 +63,15 @@ export class AppComponent {
       const tokenSupplyStr = utils.formatEther(tokenSupplyBN);
       this.tokenSupply = parseFloat(tokenSupplyStr);
     });
+  }
+
+  getBallotInfo() {
+    if (!this.ballotContractAddress) return;
+    this.ballotContract = new Contract(
+      this.ballotContractAddress,
+      ballotJson.abi,
+      this.userWallet ?? this.provider
+    )
   }
 
   clearBlock() {
@@ -74,7 +94,6 @@ export class AppComponent {
     if(!this.userWallet) return;
     const body = new RequestTokens(this.userWallet.address, value);
     this.http.post<ReturnTokens>(TOKEN_MINT_API_CALL, body).subscribe((response) => {
-      //todo
       this.userTokenBalance = response.amount;
       this.tokenRequestTx = response.txHash;
     });
@@ -83,5 +102,4 @@ export class AppComponent {
 
 // TODO
 // Connect metamask injected provider
-// Request ballot contract from backend
 // Add frontend function to delegate votes (token contract), cast votes (ballot), and query voting power (ballot), query votes cast (ballot)
