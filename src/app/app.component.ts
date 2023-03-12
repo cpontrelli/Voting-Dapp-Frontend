@@ -1,11 +1,19 @@
 import { HttpClient } from '@angular/common/http';
 import { Component } from '@angular/core';
 import { BigNumber, Contract, ethers, utils, Wallet } from 'ethers';
+import { ExternalProvider } from "@ethersproject/providers";
 import { Address } from 'src/dtos/Address';
 import { RequestTokens } from 'src/dtos/RequestToken.dto';
 import { ReturnTokens } from 'src/dtos/ReturnTokens.dto';
 import tokenJson from "../assets/MyToken.json";
 import ballotJson from "../assets/Ballot.json";
+
+// Metamask will inject the ethereum object to DOM
+declare global {
+  interface Window {
+    ethereum: ExternalProvider;
+  }
+}
 
 const TOKEN_ADDRESS_API_URL = 'http://localhost:3000/token-address';
 const BALLOT_ADDRESS_API_URL = 'http://localhost:3000/ballot-address';
@@ -17,9 +25,10 @@ const TOKEN_MINT_API_CALL = 'http://localhost:3000/request-tokens';
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent {
-  provider: ethers.providers.BaseProvider;
+  provider: ethers.providers.Web3Provider
   blockNumber: number | string | undefined;
-  userWallet: Wallet | undefined;
+  signer: ethers.providers.JsonRpcSigner | undefined;
+  userAddress: string | undefined;
   userBalance: number | undefined;
   userTokenBalance: number | undefined;
   tokenContractAddress: string | undefined;
@@ -31,7 +40,7 @@ export class AppComponent {
   userVotingPower: number | undefined;
 
   constructor(private http: HttpClient) {
-    this.provider = ethers.providers.getDefaultProvider('goerli');
+    this.provider = new ethers.providers.Web3Provider(window.ethereum, 'goerli');
   }
 
   syncBlock() {
@@ -39,14 +48,11 @@ export class AppComponent {
     this.provider.getBlock('latest').then((block) => {
       this.blockNumber = block.number;
     });
-
     this.http.get<Address>(TOKEN_ADDRESS_API_URL)
       .subscribe((response) => {
         this.tokenContractAddress = response.address;
         this.getTokenInfo();
     });
-
-    
   }
 
   syncBallot() {
@@ -62,7 +68,7 @@ export class AppComponent {
     this.tokenContract = new Contract(
       this.tokenContractAddress,
       tokenJson.abi,
-      this.userWallet ?? this.provider
+      this.signer ?? this.provider
     )
     this.tokenContract['totalSupply']().then((tokenSupplyBN: BigNumber) => {
       const tokenSupplyStr = utils.formatEther(tokenSupplyBN);
@@ -75,9 +81,9 @@ export class AppComponent {
     this.ballotContract = new Contract(
       this.ballotContractAddress,
       ballotJson.abi,
-      this.userWallet ?? this.provider
+      this.signer ?? this.provider
     )
-    this.ballotContract['votingPower'](this.userWallet?.address).then((votingPowerBN: BigNumber) => {
+    this.ballotContract['votingPower'](this.userAddress).then((votingPowerBN: BigNumber) => {
       const votingPowerStr = utils.formatEther(votingPowerBN);
       this.userVotingPower = parseFloat(votingPowerStr);
     });
@@ -87,21 +93,30 @@ export class AppComponent {
     this.blockNumber = undefined;
   }
 
-  createWallet() {
-    this.userWallet = Wallet.createRandom().connect(this.provider);
-    this.userWallet.getBalance().then((balanceBN) => {
-      const balanceStr = utils.formatEther(balanceBN);
-      this.userBalance = parseFloat(balanceStr);
-      this.tokenContract?.['balanceOf'](this.userWallet?.address).then((tokenBalanceBN: BigNumber) => {
+  connectWallet() {
+    // Request the signer to connect
+    this.provider.send("eth_requestAccounts", []).then(() => {
+      this.signer = this.provider.getSigner();
+      // query account balance
+      this.signer.getBalance().then((balanceBN) => {
+        const balanceStr = utils.formatEther(balanceBN);
+        this.userBalance = parseFloat(balanceStr);
+      });
+      // get the signer address
+      this.signer.getAddress().then((address) => {
+        this.userAddress = address;
+        // query MTK balance 
+        this.tokenContract?.['balanceOf'](this.userAddress).then((tokenBalanceBN: BigNumber) => {
           const tokenBalaceStr = utils.formatEther(tokenBalanceBN);
           this.userTokenBalance = parseFloat(tokenBalaceStr);
+        });
       });
     });
   }
 
   requestTokens(value: string) {
-    if(!this.userWallet) return;
-    const body = new RequestTokens(this.userWallet.address, value);
+    if(!this.userAddress) return;
+    const body = new RequestTokens(this.userAddress, value);
     this.http.post<ReturnTokens>(TOKEN_MINT_API_CALL, body).subscribe((response) => {
       this.userTokenBalance = response.amount;
       this.tokenRequestTx = response.txHash;
@@ -110,5 +125,4 @@ export class AppComponent {
 }
 
 // TODO
-// Connect metamask injected provider
-// Add frontend function to delegate votes (token contract), cast votes (ballot), and query voting power (ballot), query votes cast (ballot)
+// Add frontend function to delegate votes (token contract), cast votes (ballot), query votes cast (ballot)

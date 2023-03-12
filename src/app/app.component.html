@@ -1,13 +1,13 @@
 <div class="px-4 py-5 my-5 text-center">
-  <h1 class="display-5 fw-bold">Hello</h1>
+  <h1 class="display-5 fw-bold">Voting Dapp</h1>
   <div class="col-lg-6 mx-auto">
     <div *ngIf="blockNumber" class="my-4">
       <p *ngIf="blockNumber" class="lead mb-4">We are connected to the Goerli Blockchain at block {{ blockNumber }}</p>
-      <button type="button" class="btn btn-success btn-lg px-4 gap-3" (click)="createWallet()">{{userWallet ? "Recreate" : "Create"}} Wallet</button>
-      <div *ngIf="userWallet" class="card my-4">
+      <button type="button" class="btn btn-success btn-lg px-4 gap-3" (click)="connectWallet()">Connect Wallet</button>
+      <div *ngIf="signer" class="card my-4">
         <div class="card-body">
           <h5 class="card-title">User Wallet</h5>
-          <h6 class="card-subtitle mb-2 text-muted">{{userWallet?.address}}</h6>
+          <h6 class="card-subtitle mb-2 text-muted">{{userAddress}}</h6>
           <p class="card-text">Balance: {{userBalance}} ETH</p>
           <p class="card-text">Token Balance: {{userTokenBalance}} MTK</p>
           <p *ngIf="tokenRequestTx" class="my-4">TxHash: {{tokenRequestTx}}</p>
@@ -31,7 +31,7 @@
       <div class="card-body">
         <h5 class="card-title">Ballot Info</h5>
         <h6 class="card-subtitle mb-2 text-muted">{{ballotContractAddress}}</h6>
-        <p *ngIf="userWallet" class="card-text">Voting Power: {{userVotingPower}}</p>
+        <p *ngIf="signer" class="card-text">Voting Power: {{userVotingPower}}</p>
         <button type="button" class="btn btn-primary btn-lg px-4 gap-3" (click)="syncBallot()">Sync Ballot</button>
       </div>
     </div>
