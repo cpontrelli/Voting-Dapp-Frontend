@@ -27,10 +27,12 @@
         </div>
       </div>
     </div>
-    <div *ngIf="ballotContractAddress" class="card my-4">
+    <div *ngIf="blockNumber && userTokenBalance && userTokenBalance > 0" class="card my-4">
       <div class="card-body">
         <h5 class="card-title">Ballot Info</h5>
         <h6 class="card-subtitle mb-2 text-muted">{{ballotContractAddress}}</h6>
+        <p *ngIf="userWallet" class="card-text">Voting Power: {{userVotingPower}}</p>
+        <button type="button" class="btn btn-primary btn-lg px-4 gap-3" (click)="syncBallot()">Sync Ballot</button>
       </div>
     </div>
     <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">

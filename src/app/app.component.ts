@@ -28,6 +28,7 @@ export class AppComponent {
   tokenRequestTx: string | undefined;
   ballotContractAddress: string | undefined;
   ballotContract: Contract | undefined;
+  userVotingPower: number | undefined;
 
   constructor(private http: HttpClient) {
     this.provider = ethers.providers.getDefaultProvider('goerli');
@@ -45,10 +46,14 @@ export class AppComponent {
         this.getTokenInfo();
     });
 
+    
+  }
+
+  syncBallot() {
     this.http.get<Address>(BALLOT_ADDRESS_API_URL)
       .subscribe((response) => {
         this.ballotContractAddress = response.address;
-        this.getTokenInfo();
+        this.getBallotInfo();
     });
   }
 
@@ -72,6 +77,10 @@ export class AppComponent {
       ballotJson.abi,
       this.userWallet ?? this.provider
     )
+    this.ballotContract['votingPower'](this.userWallet?.address).then((votingPowerBN: BigNumber) => {
+      const votingPowerStr = utils.formatEther(votingPowerBN);
+      this.userVotingPower = parseFloat(votingPowerStr);
+    });
   }
 
   clearBlock() {
