@@ -32,7 +32,9 @@
         <h5 class="card-title">Ballot Info</h5>
         <h6 class="card-subtitle mb-2 text-muted">{{ballotContractAddress}}</h6>
         <p *ngIf="signer" class="card-text">Voting Power: {{userVotingPower}}</p>
+        <p *ngIf="signer" class="card-text">Votes Cast: {{userVotesCast}}</p>
         <button type="button" class="btn btn-primary btn-lg px-4 gap-3" (click)="syncBallot()">Sync Ballot</button>
+        <button *ngIf="ballotContractAddress && tokenContractAddress" type="button" class="btn btn-success btn-lg px-4 gap-3" (click)="selfDelegate()">Self Delegate</button>
       </div>
     </div>
     <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">

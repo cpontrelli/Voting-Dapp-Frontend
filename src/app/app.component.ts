@@ -38,6 +38,7 @@ export class AppComponent {
   ballotContractAddress: string | undefined;
   ballotContract: Contract | undefined;
   userVotingPower: number | undefined;
+  userVotesCast: number | undefined;
 
   constructor(private http: HttpClient) {
     this.provider = new ethers.providers.Web3Provider(window.ethereum, 'goerli');
@@ -87,6 +88,10 @@ export class AppComponent {
       const votingPowerStr = utils.formatEther(votingPowerBN);
       this.userVotingPower = parseFloat(votingPowerStr);
     });
+    this.ballotContract['votesCast'](this.userAddress).then((votesBN: BigNumber) => {
+      const votesStr = utils.formatEther(votesBN);
+      this.userVotesCast = parseFloat(votesStr);
+    });
   }
 
   clearBlock() {
@@ -120,6 +125,15 @@ export class AppComponent {
     this.http.post<ReturnTokens>(TOKEN_MINT_API_CALL, body).subscribe((response) => {
       this.userTokenBalance = response.amount;
       this.tokenRequestTx = response.txHash;
+    });
+  }
+
+  selfDelegate() {
+    if(!this.tokenContract || !this.signer) return;
+    this.tokenContract.connect(this.signer)['delegate'](this.userAddress).then((tx: ethers.ContractTransaction) => {
+      tx.wait().then((receipt: ethers.ContractReceipt) => {
+        this.syncBallot();
+      })
     });
   }
 }
